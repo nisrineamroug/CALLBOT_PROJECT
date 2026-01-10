@@ -1,0 +1,39 @@
+services:
+  backend:
+    build: ./backend
+    container_name: callbot_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/backend/app # live code reload during dev
+    environment:
+      - ENV=development
+      - DATABASE_URL=postgresql://callbot:callbot123@postgresdb:5432/insurance
+    depends_on:
+      - postgresdb
+
+  postgresdb:
+    image: postgres:latest
+    container_name: callbot_db
+    restart: always
+    environment:
+      POSTGRES_USER: callbot
+      POSTGRES_PASSWORD: callbot123
+      POSTGRES_DB: insurance
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8090:80"
+    depends_on:
+      - postgresdb
+
+volumes:
+  postgres_data:
