@@ -1,39 +1,32 @@
 services:
-  backend:
-    build: ./backend
-    container_name: callbot_backend
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend/app:/backend/app # live code reload during dev
-    environment:
-      - ENV=development
-      - DATABASE_URL=postgresql://callbot:callbot123@postgresdb:5432/insurance
-    depends_on:
-      - postgresdb
 
-  postgresdb:
-    image: postgres:latest
-    container_name: callbot_db
+  n8n:
+    image: n8nio/n8n
+    container_name: callbot_n8n
     restart: always
-    environment:
-      POSTGRES_USER: callbot
-      POSTGRES_PASSWORD: callbot123
-      POSTGRES_DB: insurance
     ports:
-      - "5432:5432"
+      - "5678:5678"
     volumes:
-      - postgres_data:/var/lib/postgresql
-
-  pgadmin:
-    image: dpage/pgadmin4
+      - n8n_storage:/home/node/.n8n
+      - C:/n8n_files:/home/node/.n8n-files
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=secret
+      - GEMINI_API_KEY=AIzaSyB1qP24JMhHfSV1ei_jRhXVYsNGlwLySVc
+      - N8N_DEFAULT_TIMEOUT=30000
+
+  chromadb:
+    build: ./chroma
+    container_name: chromadb
+    restart: always
     ports:
-      - "8090:80"
-    depends_on:
-      - postgresdb
+      - "8001:8000"
+    volumes:
+      - ./chroma_data:/chroma
+    environment:
+      - CHROMA_TELEMETRY_ENABLED=false
 
 volumes:
-  postgres_data:
+
+  n8n_storage:
