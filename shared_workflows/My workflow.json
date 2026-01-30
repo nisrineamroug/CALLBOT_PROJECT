@@ -1,0 +1,1098 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://chromadb:8000/api/v2/tenants/default_tenant/databases/default_db/collections/25d0ef47-e4b2-402c-b19e-455bbd8ab5a7/add",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3280,
+        -2176
+      ],
+      "id": "f5b7a037-6d5d-48e2-bc10-3ca1fa522d25",
+      "name": "send post request to insert in chroma"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nconst ids = [];\nconst documents = [];\nconst metadatas = [];\nconst embeddings = [];\n\nfor (const item of inputItems) {\n  ids.push(item.json.id);\n  documents.push(item.json.document);\n  metadatas.push(item.json.metadata);\n  embeddings.push(item.json.embedding);\n}\n\nreturn [{\n  json: {\n    ids,\n    documents,\n    metadatas,\n    embeddings\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3056,
+        -2176
+      ],
+      "id": "58e6bacb-96f3-4e39-bf93-0240c4347c9f",
+      "name": "return array (chroma insertion format)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nreturn inputItems.map((item, index) => {\n  const chunk = item.json.chunkText;            // now available\n  const embedding = item.json.embedding.values; // from Gemini\n\n  return {\n    json: {\n      id: `chunk_${index + 1}`,\n      document: chunk,\n      metadata: { source: \"faq\" },\n      embedding: embedding\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2864,
+        -2176
+      ],
+      "id": "abac3500-1d3e-4b63-a95f-86297219fe79",
+      "name": "format json body for chroma insertion"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AIzaSyBWxy_EBUyIIFxWly7uceccQryfa4wxIkw"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [\n      { \"text\": \"{{$json.chunkText}}\" }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2464,
+        -2032
+      ],
+      "id": "1e69099a-5a58-4725-9b4a-0d61b3d58c43",
+      "name": "embed chunks"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the text from the previous node\nconst fullText = $input.first().json.text || \"\";\n\n// Split into words\nconst words = fullText.split(/\\s+/);\nconst chunkSize = 500; // number of words per chunk\nconst chunks = [];\n\nfor (let i = 0; i < words.length; i += chunkSize) {\n  const chunk = words.slice(i, i + chunkSize).join(\" \");\n  chunks.push({ json: { chunkText: chunk } });\n}\n\n// Return array of chunk objects\nreturn chunks;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        -2208
+      ],
+      "id": "568a25c4-7cb9-40b4-a6b4-2730de8ae6ac",
+      "name": "chunk text"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an insurance assistant.\nClassify the user’s intent into one of the following categories:\n- Greeting\n- Check claim status\n- FAQ\n- Escalate to human\n- Closing\n- Out-of-scope\n\nReturn only the intent label, nothing else."
+            },
+            {
+              "content": "={{ $json.userMessage }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -512,
+        -48
+      ],
+      "id": "2b347480-785b-47dd-9111-b4a52241ad50",
+      "name": "classification",
+      "credentials": {
+        "openAiApi": {
+          "id": "PT4LFnRKuqyDuH9I",
+          "name": "callbot_1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "RAG",
+        "height": 608,
+        "width": 2016
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1584,
+        -2400
+      ],
+      "typeVersion": 1,
+      "id": "ccb9c6d2-d4c6-4e1c-b5ba-1b1dd7f2f166",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "fallback/ out of scope / greeting / closing / smalltalk",
+        "height": 304,
+        "width": 1232
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1424,
+        1568
+      ],
+      "typeVersion": 1,
+      "id": "3a7d6a83-5a80-4c6c-a572-84d46b832c0e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2656,
+        -2176
+      ],
+      "id": "3f739e64-2cd0-4a52-841a-47efb98dc1ad",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2080,
+        -2208
+      ],
+      "id": "2a3a19d2-9789-40dc-8921-03623bca58e3",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/node/.n8n-files/insurance_faq1.pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1824,
+        -2224
+      ],
+      "id": "5a9b04c6-1991-4ba9-84d9-7965e2c1caf9",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn [\n    {\n  \"results\": [\n    {\n      \"toolCallId\":$('Webhook').first().json.body.message.toolCallList[0].id,\n      \"result\": \"im sorry,youre question requires human assistance, would you like me to escalate you to a human agent??\"\n    }\n  ]\n}\n\n  \n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        976
+      ],
+      "id": "5b2adf5d-4009-4519-8cec-a3b306575b38",
+      "name": "Escalation_response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const id= $('Webhook').first().json.body.message.artifact.messages[5].toolCalls[0].id\n\nreturn [\n {\n  \"results\": [\n    {\n      \"toolCallId\": id,\n      \"result\": $input.first().json.output[0].content[0].text\n    }\n  ]\n}\n\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        1696
+      ],
+      "id": "f9b99643-2a3e-4956-bff8-d440e8c8b0ea",
+      "name": "fallback_response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3712,
+        -32
+      ],
+      "id": "11ce7146-a9ba-4426-b637-4ceafb08e6f9",
+      "name": "Respond to Webhook",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1YclmCQYgO6IjwbawVT9wW6_HCyfundGs2DUH_gQME8Q/edit?usp=sharing",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "agent",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1YclmCQYgO6IjwbawVT9wW6_HCyfundGs2DUH_gQME8Q/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "active"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1280,
+        -608
+      ],
+      "id": "896da99f-d6b2-4021-8f95-df4a5986a3ec",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "notesInFlow": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3GV7KETFPxjwhIhS",
+          "name": "n8n google sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f08e1f39-d082-4774-9ae3-3c64505a667b",
+                    "leftValue": "={{ $json.output[0].content[0].text }}",
+                    "rightValue": "Check claim status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8bc355d9-cd42-4386-a601-7d16496112d9",
+                    "leftValue": "={{ $json.output[0].content[0].text }}",
+                    "rightValue": "FAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "af66b35d-bf1a-4a90-a731-07b34c0a1200",
+                    "leftValue": "={{ $json.output[0].content[0].text }}",
+                    "rightValue": "Escalate to human",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -128
+      ],
+      "id": "2bb6d1c9-6886-40c8-ab21-86a8ef2fd5b1",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi_call",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1440,
+        -64
+      ],
+      "id": "8f82453c-7e03-4eac-8fd5-a7d94ef312e9",
+      "name": "Webhook",
+      "webhookId": "6f79f38a-9e89-4b1d-be6f-f0a319c2dab1",
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "AIzaSyBWxy_EBUyIIFxWly7uceccQryfa4wxIkw"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [\n      { \"text\": \"{{ $('Code in JavaScript1').item.json.userMessage }}\" }\n    ]\n  }\n}   ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        -256
+      ],
+      "id": "18cc2a34-f3d6-4bca-b2a1-87f60c218230",
+      "name": "embed user input"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\nconst embedding = inputItems[0].json.embedding.values;\n\nreturn [{\n  json: {\n    query_embeddings: [embedding],\n    n_results: 3\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        0
+      ],
+      "id": "a3bbb1da-1f7f-42cb-9284-b8644934aa6b",
+      "name": "format query body and set neighbors number"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://chromadb:8000/api/v2/tenants/default_tenant/databases/default_db/collections/25d0ef47-e4b2-402c-b19e-455bbd8ab5a7/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1872,
+        16
+      ],
+      "id": "2b608c61-010e-46a4-aee3-89ed7a82ae6b",
+      "name": "query chroma"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all()\n\nconst question = $('Code in JavaScript1').first().json.userMessage\nconst faqText = items[0].json.answer; // from the current input\n\nreturn [{\n  json: {\n    prompt: `The user asked: ${question}.Here is the FAQ text: ${faqText}.Please generate a short, clear answer (2-3 sentences max) that directly addresses the question, without repeating unnecessary details and without showing that youre summarizing the text.`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2512,
+        16
+      ],
+      "id": "9ea40972-6cf9-4130-93b6-02aec0d9af78",
+      "name": "format prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst result = items[0].json;\n\n// Flatten arrays (since Chroma wraps them in another array)\nconst documents = result.documents[0];\nconst metadatas = result.metadatas[0];\nconst distances = result.distances[0];\n\n// Find the best match (lowest distance)\nlet bestIndex = 0;\nlet bestDistance = distances[0];\n\nfor (let i = 1; i < distances.length; i++) {\n  if (distances[i] < bestDistance) {\n    bestDistance = distances[i];\n    bestIndex = i;\n  }\n}\n\n// Decision logic\nif (bestDistance < 0.75) { // threshold\n  return [{\n    json: {\n      mode: \"faq\",\n      answer: documents[bestIndex],\n      metadata: metadatas[bestIndex],\n      distance: bestDistance\n    }\n  }];\n}\n\n// Default: escalate\nreturn [{\n  json: {\n    mode: \"escalate\",\n    answer: \"sorry couldnt find a response to your question, i will transfer you to an agent right away, please be patient.\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        16
+      ],
+      "id": "2e79c1ed-3383-46af-bf70-3eee56c0b023",
+      "name": "logic escalate or answer(send best chunk)"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// If you need to return a tool result contract:\nreturn {\n \n    results: [\n      {\ntoolCallId:$('Webhook').first().json.body.message.toolCalls[0].id , // you may need to pass this from Vapi if required\n        result: $input.first().json.output[0].content[0].text\n      }\n    ]\n  \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        0
+      ],
+      "id": "97015df3-6a7a-45ba-b35f-2ce4bf134891",
+      "name": "json with generated answer"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=heres the user's message : \"{{ $('Code in JavaScript1').item.json.userMessage }}\" You are a polite insurance assistant. Respond concisely and professionally to the user’s message. If it is a greeting, respond with a friendly welcome. If it is a closing, respond with a polite farewell. If it is out-of-scope, gently redirect by saying you can only help with insurance matters. Keep responses short and clear. "
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        1696,
+        1696
+      ],
+      "id": "9003ce61-0072-4f33-bec2-d2c332d869ef",
+      "name": "classification1",
+      "credentials": {
+        "openAiApi": {
+          "id": "PT4LFnRKuqyDuH9I",
+          "name": "callbot_1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        2656,
+        16
+      ],
+      "id": "377f1bac-187e-42b0-8e3f-fbe2a92cbf65",
+      "name": "classification2",
+      "credentials": {
+        "openAiApi": {
+          "id": "PT4LFnRKuqyDuH9I",
+          "name": "callbot_1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const latestUserMessage = $input.first().json.body.message.toolCalls[0].function.arguments.userMessage\nreturn [{\n  json: { userMessage: latestUserMessage }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        -48
+      ],
+      "id": "a87659d1-cb99-4f9c-8080-e5a5c69e1b6c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "getClaimStatus",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1216,
+        -720
+      ],
+      "id": "ef018a18-0a15-4853-8bcb-2aa6ee4ad7a2",
+      "name": "Webhook1",
+      "webhookId": "28db49e3-e7e7-4f7a-8f63-7eba6be5ec69"
+    },
+    {
+      "parameters": {
+        "jsCode": "const claimId =$input.first().json.body.message.toolCalls[0].function.arguments.claimId\nreturn [{ json: { claimId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        -736
+      ],
+      "id": "5bdc5b66-936f-44d3-8737-5c0e2a418733",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get claimId from webhook input\nconst claimId = $json.claimId;\n\n// Mock database: claimId → status\nconst mockDb = {\n  \"12345\": \"being processed\",\n  \"67890\": \"approved\",\n  \"11111\": \"rejected\",\n  \"22222\": \"awaiting documents\"\n};\n\n// Lookup status\nlet status = mockDb[claimId] || \"not found\";\n\n// Return result\nreturn [{\n  json: {\n    claimId,\n    status\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        -752
+      ],
+      "id": "05034904-97f7-41ef-866d-e673d7450f30",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        -736
+      ],
+      "id": "51969a1b-f862-41df-b0b1-05d8ab46d530",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const claimStatus = $input.first().json.status;\n// If you need to return a tool result contract:\nreturn {\n \n    results: [\n      {\ntoolCallId:$('Webhook1').first().json.body.message.toolCalls[0].id,\n        result: `your claim is currently ${claimStatus} . if theres anything else youll need help with, im here.`\n      }\n    ]\n  \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        -736
+      ],
+      "id": "7bba18f1-44c2-4b93-8ecc-0493bfbe5d46",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// If you need to return a tool result contract:\nreturn {\n \n    results: [\n      {\ntoolCallId:$('Webhook').first().json.body.message.toolCalls[0].id , // you may need to pass this from Vapi if required\n        result: \"escalating you to agent\"\n      }\n    ]\n  \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        -608
+      ],
+      "id": "986a5413-6623-4e74-80c6-07c9c2568bb0",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "content": "escalation",
+        "height": 240,
+        "width": 902
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1008,
+        -656
+      ],
+      "typeVersion": 1,
+      "id": "aebe222e-b9c6-4e1e-a18c-f0415adc0aad",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "faq",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "47229147-d4b8-4603-842f-dbdbde7270d4"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8d6ab59a-e396-4ab7-b8a8-51b56d22259d",
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "escalate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2288,
+        16
+      ],
+      "id": "5098315f-f4d0-42c6-b20b-df83d5a57182",
+      "name": "answer or escalate"
+    },
+    {
+      "parameters": {
+        "content": "checking status",
+        "height": 432,
+        "width": 1888
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1408,
+        -880
+      ],
+      "typeVersion": 1,
+      "id": "37aa5f63-cdf1-4965-9e66-a7e026be7b02",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "return array (chroma insertion format)": {
+      "main": [
+        [
+          {
+            "node": "send post request to insert in chroma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format json body for chroma insertion": {
+      "main": [
+        [
+          {
+            "node": "return array (chroma insertion format)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chunk text": {
+      "main": [
+        [
+          {
+            "node": "embed chunks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "classification": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "embed chunks": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "format json body for chroma insertion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "chunk text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation_response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fallback_response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [],
+        [
+          {
+            "node": "embed user input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "classification1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "embed user input": {
+      "main": [
+        [
+          {
+            "node": "format query body and set neighbors number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format query body and set neighbors number": {
+      "main": [
+        [
+          {
+            "node": "query chroma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "query chroma": {
+      "main": [
+        [
+          {
+            "node": "logic escalate or answer(send best chunk)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "format prompt": {
+      "main": [
+        [
+          {
+            "node": "classification2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "logic escalate or answer(send best chunk)": {
+      "main": [
+        [
+          {
+            "node": "answer or escalate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "json with generated answer": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "classification1": {
+      "main": [
+        [
+          {
+            "node": "fallback_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "classification2": {
+      "main": [
+        [
+          {
+            "node": "json with generated answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "answer or escalate": {
+      "main": [
+        [
+          {
+            "node": "format prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Escalation_response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "9ab23066-b5a4-47cb-a791-2cd67d6cc76e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "de2e4e7770e24611191f3901cfeb9f05020035279ddcd945b7f8aa1bba90606d"
+  },
+  "id": "feK0Vilv3vc2NEps0MhL0",
+  "tags": []
+}
