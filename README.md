@@ -84,7 +84,7 @@ Notre solution est :
    ```
    - Copier l’URL ngrok et la renseigner dans la configuration des outils Vapi.
 
-4. **Configurer Vapi manuellement**  
+4. **Configurer Vapi manuellement** link : https://vapi.ai/
 
    - Créer un assistant dans Vapi (le configurer selon vos préférences).  
    prompt model vapi :
