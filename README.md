@@ -98,8 +98,8 @@ Notre solution est :
    
 5. **Configuration de n8n**
    - **Accès à l'interface** : Une fois Docker lancé, ouvrez `http://localhost:5678`.
-     - **Identifiants** : Connectez-vous avec l'utilisateur **admin** et le mot de passe **secret**.
-   - **Import du Workflow** : Si le workflow n'apparaît pas automatiquement :
+     - **Identifiants** : Connectez-vous avec n'importe quels identifiants.
+   - **Import du Workflow (OBLIGATOIRE)** : Le workflow doit être importé manuellement :
      1. Allez dans le menu en haut à droite de n8n.
      2. Sélectionnez **Import from File**.
      3. Choisissez le fichier `My workflow.json` situé dans le dossier `shared_workflows/` du projet.
@@ -112,7 +112,7 @@ Notre solution est :
        1. Ajoutez vos fichiers (ex: `insurance_faq1.pdf`, `insurance_claims_procedure.pdf`) dans le dossier local `n8n_files/`.
        2. Dans n8n, ouvrez le nœud **Read/Write Files from Disk**.
        ![Read File Node](n8n-read-file.png)
-       3. Modifiez le champ "File(s) Selector" pour pointer vers votre fichier : `/home/node/.n8n-files/NOM_DE_VOTRE_FICHIER.pdf`.
+       3. Modifiez le champ "File(s) Selector" en remplaçant `insurance_faqs.pdf` par le nom de votre fichier (un par un).
        4. Exécutez le nœud pour indexer le fichier dans Chroma DB. 
        5. **Répétez l'opération pour chaque fichier, un par un**, en changeant le nom dans le sélecteur à chaque fois.
    - **Détails des Nœuds** :
