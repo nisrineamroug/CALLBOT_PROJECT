@@ -60,8 +60,8 @@ tmp/
 secrets.json
 
 # n8n runtime data (workflows, credentials, sqlite DB)
-.n8n_data/
-.n8n_files/
+n8n_storage/
+n8n_files/
 
 # Docker artifacts
 *.log

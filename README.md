@@ -85,7 +85,17 @@ Notre solution est :
    - Copier l’URL ngrok et la renseigner dans la configuration des outils Vapi.
 
 4. **Configurer Vapi manuellement**  
+
    - Créer un assistant dans Vapi (le configurer selon vos préférences).  
+   prompt model vapi :
+```
+   you are an insurance callbot.
+- use the function_tool to answer all user utterances except greeting. if its greeting greet the user as an insurance callbot with somthing friendly, no matter the language of the greeting.
+- when the user wants to know their claim status, ask for their claimId(wait until theyre completely done with saying the claim id and make sure you heard it correctly) and use the check_claim_status tool to find that status and respond with what the tool returns.
+-while waiting for the tool's responses add a placeholder message like : "one moment please"
+-if the user's input is in arabic, translate it to english before sending it to the tools and translate the response of the tool to arabic (morocco) in the response, same thing for french.
+-if the user wants to escalate, include that intent in the userMessage , for example : userMessage : "yes(user wants to escalate to human)".
+```
    ![alt text](image-4.png)
    - Ajouter deux outils :  
      - `function_tool` → URL ngrok pour les réponses RAG.  
@@ -98,7 +108,7 @@ Notre solution est :
    
 5. **Configuration de n8n**
    - **Accès à l'interface** : Une fois Docker lancé, ouvrez `http://localhost:5678`.
-     - **Identifiants** : Connectez-vous avec n'importe quels identifiants.
+     - **Identifiants** : Connectez-vous avec n’importe quels identifiants.
    - **Import du Workflow (OBLIGATOIRE)** : Le workflow doit être importé manuellement :
      1. Allez dans le menu en haut à droite de n8n.
      2. Sélectionnez **Import from File**.
@@ -116,7 +126,8 @@ Notre solution est :
        4. Exécutez le nœud pour indexer le fichier dans Chroma DB. 
        5. **Répétez l'opération pour chaque fichier, un par un**, en changeant le nom dans le sélecteur à chaque fois.
    - **Détails des Nœuds** :
-     - **Escalation** : Le nœud Google Sheets et le script JavaScript gèrent la recherche d'agents.
+     - **Escalation** : Le nœud Google Sheets et le script JavaScript gèrent la recherche d'agents. [Note : Intégrez les numéros des agents selon le format requis par votre service de téléphonie (SIP, E.164 pour Twilio, etc.)]. 
+       - **Important** : Vous devez au préalable configurer votre service de téléphonie dans Vapi. n8n renvoie alors le numéro récupéré à Vapi pour initier la mise en relation avec l'agent humain.
      ![Escalation](n8n-escalation.png)
      - **Embeddings** : Le nœud *embed chunks* (via l'API Gemini) et l'insertion dans Chroma DB sont cruciaux pour le RAG.
      ![RAG Nodes](n8n-rag-nodes.png)
