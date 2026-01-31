@@ -96,6 +96,30 @@ Notre solution est :
      ![alt text](image-3.png)
 
    
+5. **Configuration de n8n**
+   - **Accès à l'interface** : Une fois Docker lancé, ouvrez `http://localhost:5678`.
+     - **Identifiants** : Connectez-vous avec l'utilisateur **admin** et le mot de passe **secret**.
+   - **Import du Workflow** : Si le workflow n'apparaît pas automatiquement :
+     1. Allez dans le menu en haut à droite de n8n.
+     2. Sélectionnez **Import from File**.
+     3. Choisissez le fichier `My workflow.json` situé dans le dossier `shared_workflows/` du projet.
+   - **Configuration des Credentials** :
+     - **OpenAI & Gemini** : Dans les nœuds correspondants, ajoutez vos clés API pour permettre la génération de texte et d'embeddings.
+     - **Google Sheets** : Dans le groupe "escalation", configurez l'accès à votre feuille Google pour la gestion des agents (nœud *Get row(s) in sheet*).
+   - **Pipeline RAG (Indexation des documents)** :
+     ![RAG Overview](n8n-rag-overview.png)
+     - Pour ajouter vos propres documents d'assurance :
+       1. Ajoutez vos fichiers (ex: `insurance_faq1.pdf`, `insurance_claims_procedure.pdf`) dans le dossier local `n8n_files/`.
+       2. Dans n8n, ouvrez le nœud **Read/Write Files from Disk**.
+       ![Read File Node](n8n-read-file.png)
+       3. Modifiez le champ "File(s) Selector" pour pointer vers votre fichier : `/home/node/.n8n-files/NOM_DE_VOTRE_FICHIER.pdf`.
+       4. Exécutez le nœud pour indexer le fichier dans Chroma DB. 
+       5. **Répétez l'opération pour chaque fichier, un par un**, en changeant le nom dans le sélecteur à chaque fois.
+   - **Détails des Nœuds** :
+     - **Escalation** : Le nœud Google Sheets et le script JavaScript gèrent la recherche d'agents.
+     ![Escalation](n8n-escalation.png)
+     - **Embeddings** : Le nœud *embed chunks* (via l'API Gemini) et l'insertion dans Chroma DB sont cruciaux pour le RAG.
+     ![RAG Nodes](n8n-rag-nodes.png)
 
 ---
 

@@ -9,12 +9,12 @@ services:
     volumes:
       - ./n8n_storage:/home/node/.n8n
       - ./n8n_files:/home/node/.n8n-files
-      
+
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=secret
-      - GEMINI_API_KEY=AIzaSyB1qP24JMhHfSV1ei_jRhXVYsNGlwLySVc
+      - N8N_USER_MANAGEMENT_DISABLED=true
       - N8N_DEFAULT_TIMEOUT=30000
 
   chromadb:
